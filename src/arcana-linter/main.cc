@@ -40,10 +40,11 @@ int main(int argc, char** argv)
     {
         auto options = option_list.parse(argc, argv);
         if (options.count("help"))
-            std::cout << option_list.help({"", "compilation"}) << std::endl;
+            std::cout << option_list.help({"", "compilation"}) << '\n';
         else if (options.count("version"))
         {
-            std::cout << "  cppast version " << CPPAST_VERSION_STRING << "\n";
+            std::cout << "arcana-linter, version 0.0.1" << '\n';
+            std::cout << "  cppast version " << CPPAST_VERSION_STRING << '\n';
             std::cout << "  libclang version " << CPPAST_CLANG_VERSION_STRING << '\n';
         }
         else if (!options.count("file") || options["file"].as<std::string>().empty())
