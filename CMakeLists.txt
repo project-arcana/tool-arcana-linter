@@ -78,9 +78,14 @@ add_executable(arcana-linter ${SOURCES})
 # set compile flags
 target_compile_options(arcana-linter PUBLIC ${COMMON_COMPILE_FLAGS})
 
+if (MSVC)
+    message(ERROR "Unsupported platform")
+endif()
+
 target_link_libraries(arcana-linter PUBLIC
     clean-core
     reflector
     task-dispatcher
     cppast
+    -lstdc++fs
 )
