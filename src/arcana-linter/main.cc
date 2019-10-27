@@ -72,7 +72,14 @@ int main(int argc, char** argv)
                 if (arclint::has_cpp_file_extension(path))
                 {
                     if (run_clang_format)
-                        arclint::run_clang_format(path.c_str(), clang_format_path.c_str());
+                    {
+                        if (!arclint::run_clang_format(path.c_str(), clang_format_path.c_str()))
+                        {
+                            std::cerr << "Failed to execute clang-format at " << clang_format_path << std::endl;
+                            std::cerr << "Specify the path using --clang-format-binary <path>" << std::endl;
+                            return false;
+                        }
+                    }
 
                     arclint::CodeFile codeFile(path, parser);
 
