@@ -5,6 +5,7 @@
 #include "AstParser.hh"
 #include "CodeFile.hh"
 #include "WarningLog.hh"
+#include "clang_format.hh"
 #include "common/cxxopts.hh"
 #include "file_util.hh"
 
@@ -17,6 +18,9 @@ int main(int argc, char** argv)
         ("h,help", "display this help and exit")
         ("version", "display version information and exit")
         ("v,verbose", "be verbose when parsing")
+        ("c,run-clang-format", "run clang format on all encountered cpp files")
+        ("clang-format-binary", "the path of the clang-format binary (default: /usr/bin/clang-format)",
+         cxxopts::value<std::string>())
         ("file", "the file that is being parsed (last positional argument)",
          cxxopts::value<std::string>());
     option_list.add_options("compilation")
@@ -57,12 +61,21 @@ int main(int argc, char** argv)
             arclint::AstParser parser(options);
             arclint::WarningLog warningLog;
 
+            auto const run_clang_format = options.count("run-clang-format");
+            std::string const clang_format_path = (options.count("clang-format-binary") && !options["clang-format-binary"].as<std::string>().empty())
+                                                      ? options["clang-format-binary"].as<std::string>()
+                                                      : "/usr/bin/clang-format";
+
             auto const root_path = options["file"].as<std::string>();
 
             auto const iterate_res = arclint::iterate_regular_files(root_path, [&](fs::path const& path) {
                 if (arclint::has_cpp_file_extension(path))
                 {
+                    if (run_clang_format)
+                        arclint::run_clang_format(path.c_str(), clang_format_path.c_str());
+
                     arclint::CodeFile codeFile(path, parser);
+
                     warningLog.registerFile(codeFile);
 
                     if (codeFile.hasParseErrors())
@@ -77,7 +90,8 @@ int main(int argc, char** argv)
 
             if (!iterate_res)
                 std::cerr << "Failed to open " << root_path << std::endl;
-            else {
+            else
+            {
                 warningLog.printSummary();
             }
         }
