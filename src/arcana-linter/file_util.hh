@@ -19,7 +19,8 @@ bool iterate_regular_files(std::string const& root, F func)
         {
             if (p.is_regular_file())
             {
-                func(p.path());
+                if (!func(p.path()))
+                    break;
             }
         }
 
@@ -37,6 +38,20 @@ bool iterate_regular_files(std::string const& root, F func)
 [[nodiscard]] inline bool has_cpp_file_extension(fs::path const& path)
 {
     auto const cpp_file_exts = {".cpp", ".cxx", ".c", ".cc", ".hpp", ".h", ".hxx", ".hh", ".inl"};
+    auto const ext = path.extension().string();
+
+    for (auto const& cpp_ext : cpp_file_exts)
+        if (ext.compare(cpp_ext) == 0)
+            return true;
+
+
+    return false;
+}
+
+/// Returns true if the file's extension indicates that it is a C++/C header
+[[nodiscard]] inline bool has_cpp_header_extension(fs::path const& path)
+{
+    auto const cpp_file_exts = {".hpp", ".h", ".hxx", ".hh"};
     auto const ext = path.extension().string();
 
     for (auto const& cpp_ext : cpp_file_exts)
