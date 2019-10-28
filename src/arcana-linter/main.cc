@@ -91,7 +91,7 @@ int main(int argc, char** argv)
             });
 
             td::launch([&] {
-                auto s = td::submit_each(
+                auto s = td::submit_each_ref(
                     [&](arclint::CodeFile& file) {
                         if (run_clang_format)
                         {
