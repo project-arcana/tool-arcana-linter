@@ -11,97 +11,26 @@
 
 namespace
 {
-std::vector<std::string> blacklisted_stl_headers = {"csignal",
-                                                    "csetjmp",
-                                                    "cstdarg",
-                                                    "typeinfo",
-                                                    "typeindex",
-                                                    "bitset",
-                                                    "functional",
-                                                    "ctime",
-                                                    "chrono",
-                                                    "initializer_list",
-                                                    "tuple",
-                                                    "any",
-                                                    "optional",
-                                                    "variant",
-                                                    "compare",
-                                                    "version",
-                                                    "source_location",
-                                                    "new",
-                                                    "memory",
-                                                    "scoped_allocator",
-                                                    "memory_resource",
-                                                    "limits",
-                                                    "exception",
-                                                    "stdexception",
-                                                    "cassert",
-                                                    "system_error",
-                                                    "cerrno",
-                                                    "cctype",
-                                                    "cwctype",
-                                                    "cwchar",
-                                                    "cuchar",
-                                                    "string_view",
-                                                    "charconv",
-                                                    "format",
-                                                    "array",
-                                                    "vector",
-                                                    "deque",
-                                                    "list",
-                                                    "forward_list",
-                                                    "set",
-                                                    "map",
-                                                    "unordered_set",
-                                                    "unordered_map",
-                                                    "stack",
-                                                    "queue",
-                                                    "span",
-                                                    "iterator",
-                                                    "ranges",
-                                                    "algorithm",
-                                                    "execution",
-                                                    "complex",
-                                                    "valarray",
-                                                    "random",
-                                                    "numeric",
-                                                    "ratio",
-                                                    "cfenv",
-                                                    "bit",
-                                                    "iosfwd",
-                                                    "ios",
-                                                    "istream",
-                                                    "ostream",
-                                                    "iostream",
-                                                    "streambuf",
-                                                    "locale",
-                                                    "clocale",
-                                                    "codecvt",
-                                                    "regex",
-                                                    "thread",
-                                                    "mutex",
-                                                    "stop_token",
-                                                    "shared_mutex",
-                                                    "future",
-                                                    "semaphore",
-                                                    "latch",
-                                                    "barrier",
-                                                    "filesystem"};
-
+std::vector<std::string> whitelisted_stl_headers = {"utility", "type_traits", "atomic", "cstddef", "cstring", "cstdlib", "cstdint"};
 }
 
-arclint::CodeFile::CodeFile(const fs::path& path, const arclint::AstParser& parser)
-  : isHeader(has_cpp_header_extension(path)), isExtensionCanonical(has_canonical_cpp_file_extension(path))
+arclint::CodeFile::CodeFile(const fs::path& path) : mPath(path) { CC_ASSERT(has_cpp_file_extension(path)); }
+
+
+void arclint::CodeFile::initialize(const arclint::AstParser& parser)
 {
-    CC_ASSERT(has_cpp_file_extension(path));
+    CC_ASSERT(mInitialized == false);
+
+    isHeader = has_cpp_header_extension(mPath);
+    isExtensionCanonical = has_canonical_cpp_file_extension(mPath);
 
     try
     {
-        mFileData = parser.parseFile(path.string());
+        mFileData = parser.parseFile(mPath.string());
     }
     catch (std::runtime_error& e)
     {
-        std::cerr << "Error parsing " << path.c_str() << '\n';
+        std::cerr << "Error parsing " << mPath.c_str() << '\n';
         std::cerr << "  " << e.what() << '\n';
     }
 
@@ -116,29 +45,40 @@ arclint::CodeFile::CodeFile(const fs::path& path, const arclint::AstParser& pars
             }
         }
 
-        std::ifstream in_file_raw(path.string());
+        std::ifstream in_file_raw(mPath.string());
         if (in_file_raw.good())
         {
             std::string first_line;
             std::getline(in_file_raw, first_line);
             hasPragmaOnce = first_line.rfind("#pragma once", 0) == 0;
+
+            if (!hasPragmaOnce)
+            {
+                std::cout << "This line is not pragma once: " << first_line << std::endl;
+            }
         }
-        else {
+        else
+        {
             throw std::runtime_error("Failed to re-open file");
         }
     }
+
+    mInitialized = true;
 }
 
-int arclint::CodeFile::getNumBlacklistedSTLIncludes() const
+std::vector<std::string> arclint::CodeFile::getBlacklistedSTLIncludes() const
 {
-    auto res = 0;
+    std::vector<std::string> res;
+    res.reserve(4);
 
     for (auto const& include : mIncludedHeaders)
     {
-        // TODO: Maybe this should use a whitelist instead, and check if the include has no '.' inside of it
-        if (std::find(blacklisted_stl_headers.begin(), blacklisted_stl_headers.end(), include) != blacklisted_stl_headers.end())
+        if (include.find('.') == std::string::npos)
         {
-            ++res;
+            // include has no '.', thus likely an STL header
+            if (std::find(whitelisted_stl_headers.begin(), whitelisted_stl_headers.end(), include) == whitelisted_stl_headers.end())
+                // header not on the whitelist
+                res.push_back(include);
         }
     }
 

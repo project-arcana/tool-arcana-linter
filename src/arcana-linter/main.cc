@@ -2,6 +2,8 @@
 #include <iostream> // TODO rlog
 #include <string>   // TODO cc::string
 
+#include <clean-core/assert.hh>
+
 #include "AstParser.hh"
 #include "CodeFile.hh"
 #include "WarningLog.hh"
@@ -62,9 +64,20 @@ int main(int argc, char** argv)
             arclint::WarningLog warningLog;
 
             auto const run_clang_format = options.count("run-clang-format");
+
+            if (!run_clang_format)
+                std::cout << "Clang format off" << std::endl;
+
             std::string const clang_format_path = (options.count("clang-format-binary") && !options["clang-format-binary"].as<std::string>().empty())
                                                       ? options["clang-format-binary"].as<std::string>()
                                                       : "/usr/bin/clang-format";
+
+            if (run_clang_format && !arclint::is_clang_format_available(clang_format_path.c_str()))
+            {
+                std::cerr << "Failed to execute clang-format at " << clang_format_path << std::endl;
+                std::cerr << "Specify the path using --clang-format-binary <path>" << std::endl;
+                return 1;
+            }
 
             auto const root_path = options["file"].as<std::string>();
 
@@ -73,15 +86,12 @@ int main(int argc, char** argv)
                 {
                     if (run_clang_format)
                     {
-                        if (!arclint::run_clang_format(path.c_str(), clang_format_path.c_str()))
-                        {
-                            std::cerr << "Failed to execute clang-format at " << clang_format_path << std::endl;
-                            std::cerr << "Specify the path using --clang-format-binary <path>" << std::endl;
-                            return false;
-                        }
+                        auto const cf_success = arclint::run_clang_format(path.c_str(), clang_format_path.c_str());
+                        CC_RUNTIME_ASSERT(cf_success);
                     }
 
-                    arclint::CodeFile codeFile(path, parser);
+                    arclint::CodeFile codeFile(path);
+                    codeFile.initialize(parser);
 
                     warningLog.registerFile(codeFile);
 
