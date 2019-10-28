@@ -54,7 +54,7 @@ void arclint::CodeFile::initialize(const arclint::AstParser& parser)
 
             if (!hasPragmaOnce)
             {
-                std::cout << "This line is not pragma once: " << first_line << std::endl;
+//                std::cout << "This line is not pragma once: " << first_line << std::endl;
             }
         }
         else
