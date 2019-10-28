@@ -1,8 +1,11 @@
 #include <fstream>
 #include <iostream> // TODO rlog
 #include <string>   // TODO cc::string
+#include <vector>
 
 #include <clean-core/assert.hh>
+
+#include <task-dispatcher/td.hh>
 
 #include "AstParser.hh"
 #include "CodeFile.hh"
@@ -64,10 +67,6 @@ int main(int argc, char** argv)
             arclint::WarningLog warningLog;
 
             auto const run_clang_format = options.count("run-clang-format");
-
-            if (!run_clang_format)
-                std::cout << "Clang format off" << std::endl;
-
             std::string const clang_format_path = (options.count("clang-format-binary") && !options["clang-format-binary"].as<std::string>().empty())
                                                       ? options["clang-format-binary"].as<std::string>()
                                                       : "/usr/bin/clang-format";
@@ -81,29 +80,36 @@ int main(int argc, char** argv)
 
             auto const root_path = options["file"].as<std::string>();
 
+            std::vector<arclint::CodeFile> code_files;
+
             auto const iterate_res = arclint::iterate_regular_files(root_path, [&](fs::path const& path) {
                 if (arclint::has_cpp_file_extension(path))
                 {
-                    if (run_clang_format)
-                    {
-                        auto const cf_success = arclint::run_clang_format(path.c_str(), clang_format_path.c_str());
-                        CC_RUNTIME_ASSERT(cf_success);
-                    }
-
-                    arclint::CodeFile codeFile(path);
-                    codeFile.initialize(parser);
-
-                    warningLog.registerFile(codeFile);
-
-                    if (codeFile.hasParseErrors())
-                    {
-                        // break on the first parse error
-                        return false;
-                    }
+                    code_files.emplace_back(path);
                 }
-
                 return true;
             });
+
+            td::launch([&] {
+                auto s = td::submit_each_ref(
+                    [&](arclint::CodeFile& file) {
+                        if (run_clang_format)
+                        {
+                            auto const cf_success = arclint::run_clang_format(file.getFileName().c_str(), clang_format_path.c_str());
+                            CC_RUNTIME_ASSERT(cf_success);
+                        }
+
+                        file.initialize(parser);
+                    },
+                    cc::span<arclint::CodeFile>(code_files.data(), code_files.size()));
+
+                td::wait_for(s);
+            });
+
+            for (auto const& file : code_files)
+            {
+                warningLog.registerFile(file);
+            }
 
             if (!iterate_res)
                 std::cerr << "Failed to open " << root_path << std::endl;
