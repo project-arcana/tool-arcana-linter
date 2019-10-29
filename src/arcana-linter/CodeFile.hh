@@ -23,6 +23,8 @@ public:
     /// Returns the blacklisted STL headers included by this file
     [[nodiscard]] std::vector<std::string> getBlacklistedSTLIncludes() const;
 
+    [[nodiscard]] std::vector<std::string> const& getFunctionsMissingNoexcept() const { return mFunctionsMissingNoexcept; }
+
     [[nodiscard]] int getNumIncludes() const { return int(mIncludedHeaders.size()); }
 
     [[nodiscard]] std::string getFileName() const { return mPath.string(); }
@@ -38,5 +40,6 @@ private:
     bool mInitialized = false;
     std::unique_ptr<cppast::cpp_file> mFileData;
     std::vector<std::string> mIncludedHeaders;
+    std::vector<std::string> mFunctionsMissingNoexcept;
 };
 }
