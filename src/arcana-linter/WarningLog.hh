@@ -34,7 +34,7 @@ class WarningLog
 public:
     void registerFile(CodeFile const& file);
 
-    void printSummary() const;
+    void printSummary(double time_spent_ms) const;
 
 private:
     int mNumTranslationUnits = 0;

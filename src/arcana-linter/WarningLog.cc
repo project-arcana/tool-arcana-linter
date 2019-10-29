@@ -48,9 +48,9 @@ void arclint::WarningLog::registerFile(const arclint::CodeFile& file)
     mNumMissingNoexcept += int(file_info.funcs_missing_noexcept.size());
 }
 
-void arclint::WarningLog::printSummary() const
+void arclint::WarningLog::printSummary(double time_spent_ms) const
 {
-    std::cout << "parse completed (" << mNumTranslationUnits << " TUs, " << mNumHeaders << " headers)" << std::endl;
+    std::cout << "parsed " << mNumTranslationUnits << " TUs and " << mNumHeaders << " headers in " << time_spent_ms << " ms" << std::endl;
 
     if (mNumBlacklistedSTLIncludes > 0)
     {

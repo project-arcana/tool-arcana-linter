@@ -2,6 +2,7 @@
 #include <iostream> // TODO rlog
 #include <string>   // TODO cc::string
 #include <vector>
+#include <chrono>
 
 #include <clean-core/assert.hh>
 
@@ -16,6 +17,8 @@
 
 int main(int argc, char** argv)
 {
+    auto const start_time = std::chrono::high_resolution_clock::now();
+
     cxxopts::Options option_list("arcana-linter");
 
     // clang-format off
@@ -115,7 +118,9 @@ int main(int argc, char** argv)
                 std::cerr << "Failed to open " << root_path << std::endl;
             else
             {
-                warningLog.printSummary();
+                auto const end_time = std::chrono::high_resolution_clock::now();
+                auto const run_time_ms = std::chrono::duration<double>(end_time - start_time).count() * 1000;
+                warningLog.printSummary(run_time_ms);
             }
         }
     }
