@@ -93,7 +93,8 @@ namespace
 
 namespace
 {
-std::vector<std::string> whitelisted_stl_headers = {"utility", "type_traits", "atomic", "cstddef", "cstring", "cstdlib", "cstdint"};
+std::vector<std::string> whitelisted_stl_headers
+    = {"utility", "type_traits", "atomic", "cstddef", "cstring", "cstdlib", "cstdint", "initializer_list"};
 }
 
 arclint::CodeFile::CodeFile(const fs::path& path) : mPath(path) { CC_ASSERT(has_cpp_file_extension(path)); }
