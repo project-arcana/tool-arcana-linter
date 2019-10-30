@@ -73,7 +73,9 @@ file(GLOB_RECURSE SOURCES
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 # create target
+
 add_executable(arcana-linter ${SOURCES})
+target_include_directories(arcana-linter PUBLIC "src")
 
 # set compile flags
 target_compile_options(arcana-linter PUBLIC ${COMMON_COMPILE_FLAGS})

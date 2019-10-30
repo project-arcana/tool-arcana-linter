@@ -1,8 +1,8 @@
+#include <chrono>
 #include <fstream>
 #include <iostream> // TODO rlog
 #include <string>   // TODO cc::string
 #include <vector>
-#include <chrono>
 
 #include <clean-core/assert.hh>
 
@@ -13,6 +13,7 @@
 #include "WarningLog.hh"
 #include "clang_format.hh"
 #include "common/cxxopts.hh"
+#include "diagnostics/diagnostics.hh"
 #include "file_util.hh"
 
 int main(int argc, char** argv)
@@ -67,8 +68,8 @@ int main(int argc, char** argv)
         else
         {
             arclint::AstParser parser(options);
-            arclint::WarningLog warningLog;
 
+            // Prepare clang format
             auto const run_clang_format = options.count("run-clang-format");
             std::string const clang_format_path = (options.count("clang-format-binary") && !options["clang-format-binary"].as<std::string>().empty())
                                                       ? options["clang-format-binary"].as<std::string>()
@@ -81,18 +82,26 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-            auto const root_path = options["file"].as<std::string>();
-
+            // Initialize CodeFiles
             std::vector<arclint::CodeFile> code_files;
+            {
+                auto const root_path = options["file"].as<std::string>();
+                auto const iterate_res = arclint::iterate_regular_files(root_path, [&](fs::path const& path) {
+                    if (arclint::has_cpp_file_extension(path))
+                    {
+                        code_files.emplace_back(path);
+                    }
+                    return true;
+                });
 
-            auto const iterate_res = arclint::iterate_regular_files(root_path, [&](fs::path const& path) {
-                if (arclint::has_cpp_file_extension(path))
+                if (!iterate_res)
                 {
-                    code_files.emplace_back(path);
+                    std::cerr << "Failed to open " << root_path << std::endl;
+                    return 1;
                 }
-                return true;
-            });
+            }
 
+            // Multithreaded parse and clang-format execution
             td::launch([&] {
                 auto s = td::submit_each_ref(
                     [&](arclint::CodeFile& file) {
@@ -109,15 +118,19 @@ int main(int argc, char** argv)
                 td::wait_for(s);
             });
 
-            for (auto const& file : code_files)
+            // Print summary
             {
-                warningLog.registerFile(file);
-            }
+                arclint::WarningLog warningLog;
+                warningLog.addDiagnostic<arclint::diag::DPragmaOnce>();
+                warningLog.addDiagnostic<arclint::diag::DBlacklistedSTL>();
+                warningLog.addDiagnostic<arclint::diag::DNoexceptMember>();
+                warningLog.addDiagnostic<arclint::diag::DFileExtension>();
 
-            if (!iterate_res)
-                std::cerr << "Failed to open " << root_path << std::endl;
-            else
-            {
+                for (auto const& file : code_files)
+                {
+                    warningLog.registerFile(file);
+                }
+
                 auto const end_time = std::chrono::high_resolution_clock::now();
                 auto const run_time_ms = std::chrono::duration<double>(end_time - start_time).count() * 1000;
                 warningLog.printSummary(run_time_ms);
