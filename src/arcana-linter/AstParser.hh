@@ -6,6 +6,15 @@
 
 namespace arclint
 {
+class silent_diagnostic_logger final : public cppast::diagnostic_logger
+{
+public:
+    using diagnostic_logger::diagnostic_logger;
+
+private:
+    bool do_log(const char*, const cppast::diagnostic&) const override { return false; }
+};
+
 class AstParser
 {
 public:
@@ -15,7 +24,7 @@ public:
 
 private:
     cppast::libclang_compile_config mConfig;
-    cppast::stderr_diagnostic_logger mLogger;
+    silent_diagnostic_logger mLogger;
 };
 
 }
